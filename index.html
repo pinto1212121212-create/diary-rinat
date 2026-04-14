@@ -2030,7 +2030,31 @@ async function syncData(){
     if(a&&typeof a==='object'){S.A=a;changed=true;}
     if(t&&typeof t==='object'){S.T=t;changed=true;}
     if(g&&typeof g==='object'){S.G=g;changed=true;}
-    if(changed&&S.screen==='diary'&&!S.lModal&&!S.gModal)render();
+    if(changed){
+      // Never interrupt when history panel or modal is open
+      if(S.showHistory){
+        // Only refresh panel data silently
+        const hc=document.querySelector('.hist-content');
+        const ht=document.querySelector('.hist-tabs');
+        if(hc&&ht){
+          const n2=new Date(),all2=allAppts(),upcoming=all2.filter(a=>a.dt>n2),history=all2.filter(a=>a.dt<=n2).reverse();
+          if(S.histTab==='upcoming')hc.innerHTML=buildUpcoming(upcoming);
+          else if(S.histTab==='history')hc.innerHTML=buildHistory(history);
+          else if(S.histTab==='debts')hc.innerHTML=renderDebts();
+          // payments/goals/clients/cancellations/packages - don't auto-refresh to avoid interrupting user
+        }
+      } else if(S.screen==='diary'&&!S.lModal&&!S.gModal&&!S.tModal){
+        // Smart partial: only update content, not full page
+        const dc=document.querySelector('#diary-content');
+        const dt=document.querySelector('#diary-tabs');
+        if(dc&&dt){
+          const panels=[pLaser,pTasks,pGoals];
+          dc.innerHTML=panels[S.tab-1]();
+        } else if(S.screen==='diary'){
+          render();
+        }
+      }
+    }
   }catch(e){}
 }
 setInterval(syncData,15000);
