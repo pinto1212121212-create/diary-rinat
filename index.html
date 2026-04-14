@@ -548,6 +548,20 @@ textarea.task-modal-area{width:100%;border:1.5px solid #e5e7eb;border-radius:12p
 .ws{flex:1;text-align:center}
 .ws-val{font-size:15px;font-weight:900;color:#7c3aed}
 .ws-lbl{font-size:9px;color:#9ca3af;margin-top:1px}
+
+/* ── CRM Filter Pills ── */
+.crm-filter-pills{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.crm-pill{padding:7px 14px;border-radius:20px;border:1.5px solid #ede9fe;background:white;color:#6b7280;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.15s;display:flex;align-items:center;gap:5px}
+.crm-pill.on{background:#7c3aed;color:white;border-color:#7c3aed;box-shadow:0 2px 8px rgba(124,58,237,.3)}
+.crm-pill.red.on{background:#dc2626;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,.3)}
+.crm-pill.blue.on{background:#2563eb;border-color:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,.3)}
+.crm-pill-badge{background:rgba(255,255,255,.3);border-radius:10px;padding:0 6px;font-size:10px}
+/* Discount field */
+.discount-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;background:#fefce8;border-radius:12px;padding:10px 14px;border:1.5px solid #fde68a}
+.discount-lbl{font-size:12px;color:#92400e;font-weight:700;flex-shrink:0}
+.discount-inp{flex:1;border:1.5px solid #fde68a;border-radius:10px;padding:8px 12px;font-size:14px;outline:none;background:white;text-align:center;font-family:inherit;width:60px}
+.discount-inp:focus{border-color:#f59e0b}
+.discount-result{font-size:14px;font-weight:800;color:#059669;flex-shrink:0}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
@@ -631,7 +645,7 @@ const S={
   tY:now.getFullYear(),tM:now.getMonth()+1,tSel:TD,
   gY:now.getFullYear(),gM:now.getMonth()+1,
   // data
-  DT:{},RT:{},A:{},T:{},G:{},BG:{},CL:{},CANC:{},PKGS:{},showHistory:false,histTab:"upcoming",payFilter:"all",showAddGoal:false,newGoal:{title:"",target:"",period:"month",type:"revenue"},openClient:null,editClient:false,crmSearch:"",showMonthPicker:false,showYearPicker:false,editPayKey:null,showAddPkg:false,editPkgKey:null
+  DT:{},RT:{},A:{},T:{},G:{},BG:{},CL:{},CANC:{},PKGS:{},showHistory:false,histTab:"upcoming",payFilter:"all",showAddGoal:false,newGoal:{title:"",target:"",period:"month",type:"revenue"},openClient:null,editClient:false,crmSearch:"",crmFilter:"all",showMonthPicker:false,showYearPicker:false,editPayKey:null,showAddPkg:false,editPkgKey:null
 };
 
 // ── Calendar HTML ─────────────────────────────────────
@@ -1004,7 +1018,7 @@ function nc(color,d,y,m){
 }
 // Laser actions
 function ss(t){S.lSlot=t;S.lF={};modalRender();}
-function sva(){const n=(document.getElementById('fn')||{}).value||'';if(!n.trim()){alert('נא להזין שם לקוח');return;}const paid=(document.getElementById('fpaid')||{}).checked||false;if(!S.A[S.lSel])S.A[S.lSel]={};S.A[S.lSel][S.lSlot]={name:n,phone:(document.getElementById('fp')||{}).value||'',type:(document.getElementById('ft')||{}).value||'',price:(document.getElementById('fr')||{}).value||'',duration:(document.getElementById('fd')||{}).value||'',paid};store.set('appts',S.A);S.lModal=null;diaryRender();}
+function sva(){const n=(document.getElementById('fn')||{}).value||'';if(!n.trim()){alert('נא להזין שם לקוח');return;}const paid=(document.getElementById('fpaid')||{}).checked||false;const disc2=Number((document.getElementById('fdisc')||{}).value||0);const basePrice2=(document.getElementById('fr')||{}).value||'';const finalPrice2=disc2>0&&basePrice2?String(Math.round(Number(basePrice2)*(1-disc2/100))):basePrice2;if(!S.A[S.lSel])S.A[S.lSel]={};S.A[S.lSel][S.lSlot]={name:n,phone:(document.getElementById('fp')||{}).value||'',type:(document.getElementById('ft')||{}).value||'',price:finalPrice2,originalPrice:disc2>0?basePrice2:'',discount:disc2||0,duration:(document.getElementById('fd')||{}).value||'',paid};store.set('appts',S.A);S.lModal=null;diaryRender();}
 function da(s){if(!S.A[S.lSel])return;delete S.A[S.lSel][s];store.set('appts',S.A);diaryRender();}
 function openMove(slot){
   S.moveSlot=slot;
@@ -1059,7 +1073,7 @@ function daConfirm(s){
 function openEdit(slot){
   const d=(S.A[S.lSel]||{})[slot]||{};
   S.lEditSlot=slot;
-  S.lF={name:d.name||'',phone:d.phone||'',type:d.type||'',price:d.price||'',duration:d.duration||'',paid:d.paid||false};
+  S.lF={name:d.name||'',phone:d.phone||'',type:d.type||'',price:d.originalPrice||d.price||'',duration:d.duration||'',paid:d.paid||false,discount:d.discount||0};
   modalRender();
 }
 function sve(){const n=(document.getElementById('fn')||{}).value||'';if(!n.trim()){alert('נא להזין שם לקוח');return;}if(!S.A[S.lSel])S.A[S.lSel]={};S.A[S.lSel][S.lEditSlot]={name:n,phone:(document.getElementById('fp')||{}).value||'',type:(document.getElementById('ft')||{}).value||'',price:(document.getElementById('fr')||{}).value||'',duration:(document.getElementById('fd')||{}).value||'',paid:(document.getElementById('fpaid')||{}).checked||false};store.set('appts',S.A);S.lModal=null;S.lEditSlot=null;diaryRender();}
@@ -1604,6 +1618,20 @@ function getLaserAnim(){
 .ws{flex:1;text-align:center}
 .ws-val{font-size:15px;font-weight:900;color:#7c3aed}
 .ws-lbl{font-size:9px;color:#9ca3af;margin-top:1px}
+
+/* ── CRM Filter Pills ── */
+.crm-filter-pills{display:flex;gap:7px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px}
+.crm-pill{padding:7px 14px;border-radius:20px;border:1.5px solid #ede9fe;background:white;color:#6b7280;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;transition:.15s;display:flex;align-items:center;gap:5px}
+.crm-pill.on{background:#7c3aed;color:white;border-color:#7c3aed;box-shadow:0 2px 8px rgba(124,58,237,.3)}
+.crm-pill.red.on{background:#dc2626;border-color:#dc2626;box-shadow:0 2px 8px rgba(220,38,38,.3)}
+.crm-pill.blue.on{background:#2563eb;border-color:#2563eb;box-shadow:0 2px 8px rgba(37,99,235,.3)}
+.crm-pill-badge{background:rgba(255,255,255,.3);border-radius:10px;padding:0 6px;font-size:10px}
+/* Discount field */
+.discount-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;background:#fefce8;border-radius:12px;padding:10px 14px;border:1.5px solid #fde68a}
+.discount-lbl{font-size:12px;color:#92400e;font-weight:700;flex-shrink:0}
+.discount-inp{flex:1;border:1.5px solid #fde68a;border-radius:10px;padding:8px 12px;font-size:14px;outline:none;background:white;text-align:center;font-family:inherit;width:60px}
+.discount-inp:focus{border-color:#f59e0b}
+.discount-result{font-size:14px;font-weight:800;color:#059669;flex-shrink:0}
 </style>
   <svg viewBox="0 0 390 152" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
     <defs>
@@ -2200,10 +2228,33 @@ function renderCRM(){
   const filtered=q?clients.filter(([,c])=>c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)):clients;
   const totRev=clients.reduce((s,[,c])=>s+c.total,0);
   const totV=clients.reduce((s,[,c])=>s+c.visits.length,0);
-  let h=`<div class="crm-search-row"><input class="crm-search-inp" placeholder="🔍 חיפוש לקוח..." value="${x(S.crmSearch)}" oninput="S.crmSearch=this.value;crmRender()"><button class="crm-add-btn" onclick="openNewClient()">+ חדש</button></div>
-  <div class="crm-stats"><div class="crm-stat"><div class="crm-stat-val">${clients.length}</div><div class="crm-stat-lbl">לקוחות</div></div><div class="crm-stat"><div class="crm-stat-val">${totV}</div><div class="crm-stat-lbl">טיפולים</div></div><div class="crm-stat"><div class="crm-stat-val">₪${Math.round(totRev/1000)}K</div><div class="crm-stat-lbl">הכנסות</div></div></div>`;
-  if(!filtered.length){h+=`<div class="empty-state"><span class="empty-icon">👥</span>${q?'לא נמצאו':'אין לקוחות עדיין'}</div>`;}
-  else{h+=filtered.map(([k,c])=>{const last=c.visits.sort((a,b)=>b.date.localeCompare(a.date))[0];const ini=c.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();const hasSens=(S.CL?.[k]?.sens||[]).length>0;return`<div class="client-card" style="flex-direction:column;align-items:stretch;gap:10px">
+  // Count for each filter
+  const returningClients=clients.filter(([,c])=>c.visits.length>=2);
+  const problematicClients=clients.filter(([k,c])=>{
+    const cd2=S.CL?.[k]||{};
+    const tags2=cd2.tags||[];
+    const hasDebt2=c.visits.some(v=>v.price&&Number(v.price)>0&&!v.paid&&new Date(v.date+'T'+v.time)<=new Date());
+    return tags2.includes('problematic')||tags2.includes('nopay')||hasDebt2;
+  });
+  // Apply filter
+  let displayClients=filtered;
+  if(S.crmFilter==='returning')displayClients=filtered.filter(([,c])=>c.visits.length>=2);
+  else if(S.crmFilter==='problematic')displayClients=filtered.filter(([k,c])=>{
+    const cd2=S.CL?.[k]||{};
+    const tags2=cd2.tags||[];
+    const hasDebt2=c.visits.some(v=>v.price&&Number(v.price)>0&&!v.paid&&new Date(v.date+'T'+v.time)<=new Date());
+    return tags2.includes('problematic')||tags2.includes('nopay')||hasDebt2;
+  });
+
+  let h=`<div class="crm-search-row"><input class="crm-search-inp" placeholder="🔍 חיפוש לקוח..." value="${x(S.crmSearch)}" oninput="S.crmSearch=this.value;updateCrmList()"><button class="crm-add-btn" onclick="openNewClient()">+ חדש</button></div>
+  <div class="crm-filter-pills">
+    <button class="crm-pill${S.crmFilter==='all'?' on':''}" onclick="S.crmFilter='all';crmRender()">👥 כולם <span class="crm-pill-badge">${clients.length}</span></button>
+    <button class="crm-pill blue${S.crmFilter==='returning'?' on':''}" onclick="S.crmFilter='returning';crmRender()">🔄 חוזרים <span class="crm-pill-badge">${returningClients.length}</span></button>
+    <button class="crm-pill red${S.crmFilter==='problematic'?' on':''}" onclick="S.crmFilter='problematic';crmRender()">⚠️ בעייתיים <span class="crm-pill-badge">${problematicClients.length}</span></button>
+  </div>
+  <div class="crm-stats"><div class="crm-stat"><div class="crm-stat-val">${displayClients.length}</div><div class="crm-stat-lbl">מוצגים</div></div><div class="crm-stat"><div class="crm-stat-val">${totV}</div><div class="crm-stat-lbl">טיפולים</div></div><div class="crm-stat"><div class="crm-stat-val">₪${Math.round(totRev/1000)}K</div><div class="crm-stat-lbl">הכנסות</div></div></div>`;
+  if(!displayClients.length){h+=`<div class="empty-state"><span class="empty-icon">👥</span>${S.crmFilter!=='all'?'אין לקוחות בקטגוריה זו':q?'לא נמצאו':'אין לקוחות עדיין'}</div>`;}
+  else{h+=displayClients.map(([k,c])=>{const last=c.visits.sort((a,b)=>b.date.localeCompare(a.date))[0];const ini=c.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();const hasSens=(S.CL?.[k]?.sens||[]).length>0;return`<div class="client-card" style="flex-direction:column;align-items:stretch;gap:10px">
   <div style="display:flex;gap:12px;align-items:center">
     <div class="client-avatar" onclick="openClientProfile('${x(k)}')">${ini||'👤'}</div>
     <div class="client-info" onclick="openClientProfile('${x(k)}')" style="flex:1">
@@ -2223,6 +2274,7 @@ function renderCRM(){
   </div>
 
 </div>`;}).join('');}
+  h+=`</div>`;
   if(S.openClient!==null){
     const k=S.openClient,c=cm[k]||{name:k,visits:[],total:0},cd=S.CL?.[k]||{};
     const ini=(c.name||'').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase();
