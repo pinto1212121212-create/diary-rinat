@@ -2026,10 +2026,15 @@ function updateGoalModal(idx,val){
 async function syncData(){
   try{
     const [a,t,g,bg,cl,canc,pkgs]=await Promise.all([store.get('appts'),store.get('tasks'),store.get('goals'),store.get('bgoals'),store.get('clients'),store.get('cancellations'),store.get('packages')]);
+    // Only update if data actually changed
     let changed=false;
-    if(a&&typeof a==='object'){S.A=a;changed=true;}
-    if(t&&typeof t==='object'){S.T=t;changed=true;}
-    if(g&&typeof g==='object'){S.G=g;changed=true;}
+    if(a&&typeof a==='object'){const prev=JSON.stringify(S.A);S.A=a;if(JSON.stringify(S.A)!==prev)changed=true;}
+    if(t&&typeof t==='object'){const prev=JSON.stringify(S.T);S.T=t;if(JSON.stringify(S.T)!==prev)changed=true;}
+    if(g&&typeof g==='object'){const prev=JSON.stringify(S.G);S.G=g;if(JSON.stringify(S.G)!==prev)changed=true;}
+    if(bg&&typeof bg==='object'){const prev=JSON.stringify(S.BG);S.BG=bg;if(JSON.stringify(S.BG)!==prev)changed=true;}
+    if(cl&&typeof cl==='object'){const prev=JSON.stringify(S.CL);S.CL=cl;if(JSON.stringify(S.CL)!==prev)changed=true;}
+    if(canc&&typeof canc==='object'){const prev=JSON.stringify(S.CANC);S.CANC=canc;if(JSON.stringify(S.CANC)!==prev)changed=true;}
+    if(pkgs&&typeof pkgs==='object'){const prev=JSON.stringify(S.PKGS);S.PKGS=pkgs;if(JSON.stringify(S.PKGS)!==prev)changed=true;}
     if(changed){
       // Never interrupt when history panel or modal is open
       if(S.showHistory){
@@ -3233,20 +3238,6 @@ function closeHistPanel(){
   else{const sheet=document.querySelector('.hist-sheet');if(sheet)sheet.parentElement?.remove();}
 }
 
-// ── Sync ──────────────────────────────────────────────
-async function syncData(){
-  try{
-    const [a,t,g,bg,cl,canc,pkgs]=await Promise.all([store.get('appts'),store.get('tasks'),store.get('goals'),store.get('bgoals'),store.get('clients'),store.get('cancellations'),store.get('packages')]);
-    let changed=false;
-    if(a&&typeof a==='object'){S.A=a;changed=true;}
-    if(t&&typeof t==='object'){S.T=t;changed=true;}
-    if(g&&typeof g==='object'){S.G=g;changed=true;}
-    if(bg&&typeof bg==='object'){S.BG=bg;changed=true;}
-    if(cl&&typeof cl==='object'){S.CL=cl;changed=true;}
-    if(changed&&S.screen==='diary'&&!S.lModal)render();
-  }catch(e){}
-}
-setInterval(syncData,15000);
 
 
 // ── PWA Install Banner ────────────────────────────
