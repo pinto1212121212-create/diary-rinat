@@ -924,10 +924,10 @@ function render(){
       <div class="hdr">
         <button class="hdr-back" onclick="S.screen='home';S.lModal=null;modalRender()">←</button>
         <div class="hdr-info"><div class="hdr-title2">📖 היומן שלנו</div><div class="hdr-sub">דניאל ♡ רינת</div></div>
-        <button onclick="S.showHistory=true;S.histTab='upcoming';render()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:6px 10px;color:white;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;flex-shrink:0">📋 תורים</button>
+        <button onclick="openHistPanel()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:6px 10px;color:white;cursor:pointer;font-size:11px;font-weight:700;font-family:inherit;flex-shrink:0">📋 תורים</button>
       </div>
     </div>
-    ${S.showHistory?renderHistory():''}`;
+    `;
     // Inject tabs + content with stable IDs (prevents flash on tab change)
     const _tabsHtml=tabs.map(({i,l},n)=>`<button class="tab${S.tab===n+1?' on':''}" onclick="S.tab=${n+1};diaryRender()">${i} ${l}</button>`).join('');
     h+=`<div class="tabs" id="diary-tabs" style="--tc:#7c3aed">${_tabsHtml}</div><div id="diary-content" class="content">${panels[S.tab-1]()}</div><div id="diary-modal">${S.lModal?laserModal():''}</div>`;
@@ -943,8 +943,11 @@ function diaryRender(){
   const dm=document.querySelector('#diary-modal');
   if(!dt||!dc){render();return;}
   const panels=[pLaser,pTasks,pGoals];
-  const ts=[{i:'💆',l:'לייזר'},{i:'✅',l:'משימות'},{i:'🎯',l:'מטרות'}];
-  dt.innerHTML=ts.map(({i,l},n)=>`<button class="tab${S.tab===n+1?' on':''}" onclick="S.tab=${n+1};diaryRender()">${i} ${l}</button>`).join('');
+  // Only update active class on tabs - no full rebuild (no flash)
+  dt.querySelectorAll('.tab').forEach((btn,n)=>{
+    if(S.tab===n+1)btn.classList.add('on');
+    else btn.classList.remove('on');
+  });
   dc.innerHTML=panels[S.tab-1]();
   if(dm)dm.innerHTML=S.lModal?laserModal():'';
 }
@@ -3186,6 +3189,24 @@ function pLaserWeekly(){
   }
   h+=`</div>`;
   return h;
+}
+
+function openHistPanel(){
+  if(document.querySelector('.hist-sheet'))return;
+  S.showHistory=true;S.histTab='upcoming';
+  const el=document.createElement('div');
+  el.id='hist-panel-wrap';
+  el.innerHTML=renderHistory();
+  document.getElementById('app').appendChild(el);
+  // Start timer if on upcoming tab
+  setTimeout(()=>{if(document.getElementById('cd-d'))startTimer();},80);
+}
+function closeHistPanel(){
+  if(_timerInt){clearInterval(_timerInt);_timerInt=null;}
+  S.showHistory=false;
+  const el=document.getElementById('hist-panel-wrap');
+  if(el)el.remove();
+  else{const sheet=document.querySelector('.hist-sheet');if(sheet)sheet.parentElement?.remove();}
 }
 
 // ── Sync ──────────────────────────────────────────────
