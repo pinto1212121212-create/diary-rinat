@@ -2454,7 +2454,7 @@ function renderHistory(){
   else if(S.histTab==='debts')tabContent=renderDebts();
   else if(S.histTab==='cancellations')tabContent=renderCancellations();
   else tabContent=renderCRM();
-  const html=`<div class="hist-sheet"><div class="hist-hdr"><button class="hist-close" onclick="S.showHistory=false;if(_timerInt){clearInterval(_timerInt);_timerInt=null;}render()">✕</button><div class="hist-hdr-info"><div class="hist-hdr-title">📋 ניהול תורים ולקוחות</div><div class="hist-hdr-sub">${upcoming.length} קרובים · ${history.length} בהיסטוריה</div></div></div><div class="hist-tabs">${tabsHTML(upcoming,history)}</div><div class="hist-content">${tabContent}</div></div>`;
+  const html=`<div class="hist-sheet"><div class="hist-hdr"><button class="hist-close" onclick="closeHistPanel()">✕</button><div class="hist-hdr-info"><div class="hist-hdr-title">📋 ניהול תורים ולקוחות</div><div class="hist-hdr-sub">${upcoming.length} קרובים · ${history.length} בהיסטוריה</div></div></div><div class="hist-tabs">${tabsHTML(upcoming,history)}</div><div class="hist-content">${tabContent}</div></div>`;
   setTimeout(()=>{if(S.histTab==='upcoming'&&document.getElementById('cd-d'))startTimer();},80);
   return html;
 }
