@@ -2301,30 +2301,122 @@ function deleteBGoal(id){if(!confirm('למחוק יעד זה?'))return;delete S.
 function exportXLS(){
   const all2=allAppts();
   const BOM='\uFEFF';
-  const headers=['תאריך','שעה','שם לקוח','טלפון','סוג טיפול','משך (דקות)','מחיר (₪)'];
+  const now=new Date();
   const esc=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
-  const rows=all2.map(a=>[
-    "'"+a.date,                    // apostrophe → Excel reads as text, no ####
-    "'"+a.time,                    // same
-    esc(a.d.name),
-    a.d.phone?"'"+a.d.phone:'',   // apostrophe → no scientific notation
-    esc(a.d.type),
-    a.d.duration||'',
-    a.d.price?Number(a.d.price):''
-  ].join(','));
-  const totalRev=all2.filter(a=>a.d.price&&Number(a.d.price)>0).reduce((s,a)=>s+Number(a.d.price),0);
-  const n2=new Date(),mk=n2.getFullYear()+'-'+String(n2.getMonth()+1).padStart(2,'0');
-  const monthRev=all2.filter(a=>a.d.price&&a.date.startsWith(mk)).reduce((s,a)=>s+Number(a.d.price),0);
-  rows.push('');
-  rows.push(esc('סה"כ הכנסות')+',"","","","","",'+totalRev);
-  rows.push(esc('הכנסות החודש')+',"","","","","",'+monthRev);
-  rows.push(esc('מספר טיפולים')+',"","","","","",'+all2.length);
-  const csv=BOM+headers.join(',')+'\n'+rows.join('\n');
+
+  // ── Sheet 1: כל התורים ──
+  const apptHeaders=['תאריך','יום בשבוע','שעה','שם לקוח','טלפון','סוג טיפול','משך (דק)','מחיר ₪','שולם','חוב פתוח'];
+  const DY_HEB=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+  const apptRows=all2.map(a=>{
+    const d=new Date(a.date);
+    const dayHeb=DY_HEB[d.getDay()]||'';
+    const paid=a.d.paid?'כן':'לא';
+    const debt=(!a.d.paid&&a.d.price&&Number(a.d.price)>0&&a.dt<=now)?'₪'+Number(a.d.price).toLocaleString():'';
+    return[
+      "'"+a.date,
+      esc(dayHeb),
+      "'"+a.time,
+      esc(a.d.name||''),
+      a.d.phone?"'"+String(a.d.phone):'',
+      esc(a.d.type||''),
+      a.d.duration||'',
+      a.d.price?Number(a.d.price):'',
+      esc(paid),
+      esc(debt)
+    ].join(',');
+  });
+
+  // ── Summary stats ──
+  const past=all2.filter(a=>a.dt<=now);
+  const future=all2.filter(a=>a.dt>now);
+  const totalRev=past.filter(a=>a.d.price&&a.d.paid).reduce((s,a)=>s+Number(a.d.price),0);
+  const totalDebt=past.filter(a=>a.d.price&&!a.d.paid&&Number(a.d.price)>0).reduce((s,a)=>s+Number(a.d.price),0);
+  const totalClients=new Set(all2.map(a=>a.d.name)).size;
+  const mk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const monthRev=past.filter(a=>a.d.price&&a.d.paid&&a.date.startsWith(mk)).reduce((s,a)=>s+Number(a.d.price),0);
+  const monthAppts=past.filter(a=>a.date.startsWith(mk)).length;
+  const avgRev=past.length?Math.round(totalRev/new Set(past.map(a=>a.date.substring(0,7))).size):0;
+
+  // ── Sheet 2: סיכום לקוחות ──
+  const clientMap={};
+  all2.forEach(a=>{
+    const k=a.d.name||'';
+    if(!clientMap[k])clientMap[k]={name:k,phone:a.d.phone||'',visits:0,paid:0,debt:0,lastVisit:'',types:new Set()};
+    clientMap[k].visits++;
+    if(a.d.price&&a.d.paid)clientMap[k].paid+=Number(a.d.price);
+    if(a.d.price&&!a.d.paid&&a.dt<=now)clientMap[k].debt+=Number(a.d.price);
+    if(a.date>clientMap[k].lastVisit)clientMap[k].lastVisit=a.date;
+    if(a.d.type)clientMap[k].types.add(a.d.type);
+  });
+  const clientHeaders=['שם לקוח','טלפון','סה"כ ביקורים','סה"כ שולם ₪','חוב פתוח ₪','ביקור אחרון','סוגי טיפולים'];
+  const clientRows=Object.values(clientMap)
+    .sort((a,b)=>b.paid-a.paid)
+    .map(c=>[
+      esc(c.name),
+      c.phone?"'"+c.phone:'',
+      c.visits,
+      c.paid||'',
+      c.debt||'',
+      "'"+c.lastVisit,
+      esc([...c.types].join(' | '))
+    ].join(','));
+
+  // ── Sheet 3: סיכום חודשי ──
+  const monthlyMap={};
+  past.forEach(a=>{
+    const mk2=a.date.substring(0,7);
+    if(!monthlyMap[mk2])monthlyMap[mk2]={month:mk2,appts:0,revenue:0,clients:new Set(),treatments:new Set()};
+    monthlyMap[mk2].appts++;
+    if(a.d.price&&a.d.paid)monthlyMap[mk2].revenue+=Number(a.d.price);
+    monthlyMap[mk2].clients.add(a.d.name);
+    if(a.d.type)monthlyMap[mk2].treatments.add(a.d.type);
+  });
+  const monthHeaders=['חודש','מספר טיפולים','הכנסות ₪','לקוחות שונים','סוגי טיפולים'];
+  const monthRows=Object.values(monthlyMap)
+    .sort((a,b)=>b.month.localeCompare(a.month))
+    .map(m=>[
+      "'"+m.month,
+      m.appts,
+      m.revenue||'',
+      m.clients.size,
+      esc([...m.treatments].join(' | '))
+    ].join(','));
+
+  // ── Build full CSV with sections ──
+  const sep=',,,,,,,,,';
+  let csv=BOM;
+
+  // Section: מידע כללי
+  csv+=esc('📊 דוח עסקי — '+now.toLocaleDateString('he-IL'))+'\n';
+  csv+=sep+'\n';
+  csv+=esc('סה"כ הכנסות')+',₪'+totalRev.toLocaleString()+'\n';
+  csv+=esc('הכנסות החודש')+',₪'+monthRev.toLocaleString()+'\n';
+  csv+=esc('ממוצע חודשי')+',₪'+avgRev.toLocaleString()+'\n';
+  csv+=esc('חובות פתוחים')+',₪'+totalDebt.toLocaleString()+'\n';
+  csv+=esc('סה"כ לקוחות')+','+totalClients+'\n';
+  csv+=esc('טיפולים החודש')+','+monthAppts+'\n';
+  csv+=esc('תורים קרובים')+','+future.length+'\n';
+  csv+=sep+'\n\n';
+
+  // Section: כל התורים
+  csv+=esc('📅 רשימת כל התורים')+'\n';
+  csv+=apptHeaders.join(',')+'\n';
+  csv+=apptRows.join('\n')+'\n\n';
+
+  // Section: לקוחות
+  csv+=esc('👥 סיכום לקוחות')+'\n';
+  csv+=clientHeaders.join(',')+'\n';
+  csv+=clientRows.join('\n')+'\n\n';
+
+  // Section: חודשי
+  csv+=esc('📈 סיכום חודשי')+'\n';
+  csv+=monthHeaders.join(',')+'\n';
+  csv+=monthRows.join('\n')+'\n';
+
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
-  const d2=new Date();
-  a.download='תורים_'+d2.getFullYear()+'-'+String(d2.getMonth()+1).padStart(2,'0')+'.csv';
+  a.download='דוח_עסקי_'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'.csv';
   a.click();URL.revokeObjectURL(url);
 }
 function tabsHTML(upcoming,history){
@@ -2333,7 +2425,7 @@ function tabsHTML(upcoming,history){
   let debtCount=0;
   Object.entries(S.A||{}).forEach(([date,slots])=>{Object.entries(slots||{}).forEach(([time,d])=>{if(d&&d.name&&d.price&&Number(d.price)>0&&!d.paid&&new Date(date+'T'+time)<=n2)debtCount++;});});
   const pkgCount=Object.keys(S.PKGS||{}).length;
-  return`<button class="hist-tab${S.histTab==='upcoming'?' on':''}" onclick="S.histTab='upcoming';hRender()">📅 תורים ${upcoming.length?`<span class="hist-badge" style="background:#059669">${upcoming.length}</span>`:''}</button><button class="hist-tab${S.histTab==='clients'?' on':''}" onclick="S.histTab='clients';hRender()">👥 לקוחות</button><button class="hist-tab${S.histTab==='debts'?' on':''}" onclick="S.histTab='debts';hRender()">💳 חובות ${debtCount?`<span class="hist-badge" style="background:#dc2626">${debtCount}</span>`:''}</button><button class="hist-tab${S.histTab==='history'?' on':''}" onclick="S.histTab='history';hRender()">🗂 היסטוריה ${history.length?`<span class="hist-badge" style="background:#7c3aed">${history.length}</span>`:''}</button><button class="hist-tab${S.histTab==='cancellations'?' on':''}" onclick="S.histTab='cancellations';hRender()">❌ ביטולים ${cancCount?`<span class="hist-badge" style="background:#dc2626">${cancCount}</span>`:''}</button><button class="hist-tab${S.histTab==='payments'?' on':''}" onclick="S.histTab='payments';hRender()">💰 תשלומים</button><button class="hist-tab${S.histTab==='bgoals'?' on':''}" onclick="S.histTab='bgoals';hRender()">🎯 יעדים</button><button class="hist-tab${S.histTab==='packages'?' on':''}" onclick="S.histTab='packages';hRender()">📦 חבילות ${pkgCount?`<span class="hist-badge" style="background:#0891b2">${pkgCount}</span>`:''}</button>`;
+  return`<button class="hist-tab${S.histTab==='upcoming'?' on':''}" onclick="S.histTab='upcoming';hRender()">📅 תורים ${upcoming.length?`<span class="hist-badge" style="background:#059669">${upcoming.length}</span>`:''}</button><button class="hist-tab${S.histTab==='clients'?' on':''}" onclick="S.histTab='clients';hRender()">👥 לקוחות</button><button class="hist-tab${S.histTab==='debts'?' on':''}" onclick="S.histTab='debts';hRender()">💳 חובות ${debtCount?`<span class="hist-badge" style="background:#dc2626">${debtCount}</span>`:''}</button><button class="hist-tab${S.histTab==='history'?' on':''}" onclick="S.histTab='history';hRender()">🗂 היסטוריית עסקאות ${history.length?`<span class="hist-badge" style="background:#7c3aed">${history.length}</span>`:''}</button><button class="hist-tab${S.histTab==='cancellations'?' on':''}" onclick="S.histTab='cancellations';hRender()">❌ ביטולים ${cancCount?`<span class="hist-badge" style="background:#dc2626">${cancCount}</span>`:''}</button><button class="hist-tab${S.histTab==='payments'?' on':''}" onclick="S.histTab='payments';hRender()">💰 תשלומים</button><button class="hist-tab${S.histTab==='bgoals'?' on':''}" onclick="S.histTab='bgoals';hRender()">🎯 יעדים</button><button class="hist-tab${S.histTab==='packages'?' on':''}" onclick="S.histTab='packages';hRender()">📦 חבילות ${pkgCount?`<span class="hist-badge" style="background:#0891b2">${pkgCount}</span>`:''}</button>`;
 }
 function hRender(){
   const sheet=document.querySelector('.hist-sheet');
