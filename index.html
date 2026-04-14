@@ -2300,33 +2300,11 @@ function saveBGoal(){const t=(document.getElementById('gi-t')||{}).value||'',v=(
 function deleteBGoal(id){if(!confirm('למחוק יעד זה?'))return;delete S.BG[id];store.set('bgoals',S.BG);hRender();}
 function exportXLS(){
   const all2=allAppts();
-  const BOM='\uFEFF';
   const now=new Date();
-  const esc=v=>'"'+String(v||'').replace(/"/g,'""')+'"';
-
-  // ── Sheet 1: כל התורים ──
-  const apptHeaders=['תאריך','יום בשבוע','שעה','שם לקוח','טלפון','סוג טיפול','משך (דק)','מחיר ₪','שולם','חוב פתוח'];
   const DY_HEB=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
-  const apptRows=all2.map(a=>{
-    const d=new Date(a.date);
-    const dayHeb=DY_HEB[d.getDay()]||'';
-    const paid=a.d.paid?'כן':'לא';
-    const debt=(!a.d.paid&&a.d.price&&Number(a.d.price)>0&&a.dt<=now)?'₪'+Number(a.d.price).toLocaleString():'';
-    return[
-      "'"+a.date,
-      esc(dayHeb),
-      "'"+a.time,
-      esc(a.d.name||''),
-      a.d.phone?"'"+String(a.d.phone):'',
-      esc(a.d.type||''),
-      a.d.duration||'',
-      a.d.price?Number(a.d.price):'',
-      esc(paid),
-      esc(debt)
-    ].join(',');
-  });
+  const MO_HEB=['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'];
 
-  // ── Summary stats ──
+  // Stats
   const past=all2.filter(a=>a.dt<=now);
   const future=all2.filter(a=>a.dt>now);
   const totalRev=past.filter(a=>a.d.price&&a.d.paid).reduce((s,a)=>s+Number(a.d.price),0);
@@ -2335,9 +2313,8 @@ function exportXLS(){
   const mk=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const monthRev=past.filter(a=>a.d.price&&a.d.paid&&a.date.startsWith(mk)).reduce((s,a)=>s+Number(a.d.price),0);
   const monthAppts=past.filter(a=>a.date.startsWith(mk)).length;
-  const avgRev=past.length?Math.round(totalRev/new Set(past.map(a=>a.date.substring(0,7))).size):0;
 
-  // ── Sheet 2: סיכום לקוחות ──
+  // Client map
   const clientMap={};
   all2.forEach(a=>{
     const k=a.d.name||'';
@@ -2348,75 +2325,93 @@ function exportXLS(){
     if(a.date>clientMap[k].lastVisit)clientMap[k].lastVisit=a.date;
     if(a.d.type)clientMap[k].types.add(a.d.type);
   });
-  const clientHeaders=['שם לקוח','טלפון','סה"כ ביקורים','סה"כ שולם ₪','חוב פתוח ₪','ביקור אחרון','סוגי טיפולים'];
-  const clientRows=Object.values(clientMap)
-    .sort((a,b)=>b.paid-a.paid)
-    .map(c=>[
-      esc(c.name),
-      c.phone?"'"+c.phone:'',
-      c.visits,
-      c.paid||'',
-      c.debt||'',
-      "'"+c.lastVisit,
-      esc([...c.types].join(' | '))
-    ].join(','));
 
-  // ── Sheet 3: סיכום חודשי ──
+  // Monthly map
   const monthlyMap={};
   past.forEach(a=>{
     const mk2=a.date.substring(0,7);
-    if(!monthlyMap[mk2])monthlyMap[mk2]={month:mk2,appts:0,revenue:0,clients:new Set(),treatments:new Set()};
+    if(!monthlyMap[mk2])monthlyMap[mk2]={month:mk2,appts:0,revenue:0,clients:new Set()};
     monthlyMap[mk2].appts++;
     if(a.d.price&&a.d.paid)monthlyMap[mk2].revenue+=Number(a.d.price);
     monthlyMap[mk2].clients.add(a.d.name);
-    if(a.d.type)monthlyMap[mk2].treatments.add(a.d.type);
   });
-  const monthHeaders=['חודש','מספר טיפולים','הכנסות ₪','לקוחות שונים','סוגי טיפולים'];
-  const monthRows=Object.values(monthlyMap)
-    .sort((a,b)=>b.month.localeCompare(a.month))
-    .map(m=>[
-      "'"+m.month,
-      m.appts,
-      m.revenue||'',
-      m.clients.size,
-      esc([...m.treatments].join(' | '))
-    ].join(','));
 
-  // ── Build full CSV with sections ──
-  const sep=',,,,,,,,,';
-  let csv=BOM;
+  const esc=v=>String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const th=(t,c='#4c1d95')=>`<th style="background:${c};color:white;padding:8px 12px;text-align:right;white-space:nowrap;border:1px solid #ddd">${t}</th>`;
+  const td=(v,bold=false,color='')=>`<td style="padding:7px 12px;text-align:right;border:1px solid #ddd;${bold?'font-weight:bold;':''}${color?'color:'+color+';':''}">${esc(v)}</td>`;
 
-  // Section: מידע כללי
-  csv+=esc('📊 דוח עסקי — '+now.toLocaleDateString('he-IL'))+'\n';
-  csv+=sep+'\n';
-  csv+=esc('סה"כ הכנסות')+',₪'+totalRev.toLocaleString()+'\n';
-  csv+=esc('הכנסות החודש')+',₪'+monthRev.toLocaleString()+'\n';
-  csv+=esc('ממוצע חודשי')+',₪'+avgRev.toLocaleString()+'\n';
-  csv+=esc('חובות פתוחים')+',₪'+totalDebt.toLocaleString()+'\n';
-  csv+=esc('סה"כ לקוחות')+','+totalClients+'\n';
-  csv+=esc('טיפולים החודש')+','+monthAppts+'\n';
-  csv+=esc('תורים קרובים')+','+future.length+'\n';
-  csv+=sep+'\n\n';
+  let html=`<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8">
+  <style>body{font-family:Arial,sans-serif;direction:rtl}
+  table{border-collapse:collapse;width:100%;margin-bottom:28px}
+  .section-title{font-size:16px;font-weight:bold;color:#4c1d95;margin:24px 0 8px;padding-bottom:4px;border-bottom:2px solid #7c3aed}
+  .kpi-grid{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+  .kpi{background:#f5f3ff;border-radius:10px;padding:12px 18px;min-width:120px;text-align:center}
+  .kpi-val{font-size:22px;font-weight:bold;color:#7c3aed}
+  .kpi-lbl{font-size:12px;color:#6b7280;margin-top:4px}
+  </style></head><body>
+  <h2 style="color:#4c1d95;border-bottom:3px solid #7c3aed;padding-bottom:8px">📊 דוח עסקי — ${now.toLocaleDateString('he-IL')}</h2>
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-val">₪${totalRev.toLocaleString()}</div><div class="kpi-lbl">סה"כ הכנסות</div></div>
+    <div class="kpi"><div class="kpi-val">₪${monthRev.toLocaleString()}</div><div class="kpi-lbl">הכנסות החודש</div></div>
+    <div class="kpi"><div class="kpi-val" style="color:#dc2626">₪${totalDebt.toLocaleString()}</div><div class="kpi-lbl">חובות פתוחים</div></div>
+    <div class="kpi"><div class="kpi-val">${totalClients}</div><div class="kpi-lbl">סה"כ לקוחות</div></div>
+    <div class="kpi"><div class="kpi-val">${monthAppts}</div><div class="kpi-lbl">טיפולים החודש</div></div>
+    <div class="kpi"><div class="kpi-val">${future.length}</div><div class="kpi-lbl">תורים קרובים</div></div>
+  </div>`;
 
-  // Section: כל התורים
-  csv+=esc('📅 רשימת כל התורים')+'\n';
-  csv+=apptHeaders.join(',')+'\n';
-  csv+=apptRows.join('\n')+'\n\n';
+  // Table 1: All appointments
+  html+=`<div class="section-title">📅 כל התורים (${all2.length})</div><table>
+  <tr>${['תאריך','יום','שעה','שם לקוח','טלפון','סוג טיפול','משך (דק)','מחיר ₪','שולם','חוב פתוח'].map(t=>th(t)).join('')}</tr>`;
+  all2.forEach(a=>{
+    const d=new Date(a.date);
+    const dayH=DY_HEB[d.getDay()]||'';
+    const isPaid=a.d.paid;
+    const isDebt=!isPaid&&a.d.price&&Number(a.d.price)>0&&a.dt<=now;
+    html+=`<tr>
+      ${td(a.date)}${td(dayH)}${td(a.time)}
+      ${td(a.d.name||'')}${td(a.d.phone||'')}${td(a.d.type||'')}
+      ${td(a.d.duration||'')}
+      ${td(a.d.price?'₪'+Number(a.d.price).toLocaleString():'',false,a.d.price?'#059669':'')}
+      ${td(isPaid?'✅ כן':'❌ לא',false,isPaid?'#059669':'#dc2626')}
+      ${td(isDebt?'₪'+Number(a.d.price).toLocaleString():'',false,'#dc2626')}
+    </tr>`;
+  });
+  html+=`</table>`;
 
-  // Section: לקוחות
-  csv+=esc('👥 סיכום לקוחות')+'\n';
-  csv+=clientHeaders.join(',')+'\n';
-  csv+=clientRows.join('\n')+'\n\n';
+  // Table 2: Clients
+  const sortedClients=Object.values(clientMap).sort((a,b)=>b.paid-a.paid);
+  html+=`<div class="section-title">👥 סיכום לקוחות (${sortedClients.length})</div><table>
+  <tr>${['שם לקוח','טלפון','ביקורים','שולם ₪','חוב ₪','ביקור אחרון','סוגי טיפולים'].map(t=>th(t,'#065f46')).join('')}</tr>`;
+  sortedClients.forEach(c=>{
+    html+=`<tr>
+      ${td(c.name,true)}${td(c.phone)}${td(c.visits)}
+      ${td(c.paid?'₪'+c.paid.toLocaleString():'',false,'#059669')}
+      ${td(c.debt?'₪'+c.debt.toLocaleString():'',false,c.debt?'#dc2626':'')}
+      ${td(c.lastVisit)}${td([...c.types].join(' | '))}
+    </tr>`;
+  });
+  html+=`</table>`;
 
-  // Section: חודשי
-  csv+=esc('📈 סיכום חודשי')+'\n';
-  csv+=monthHeaders.join(',')+'\n';
-  csv+=monthRows.join('\n')+'\n';
+  // Table 3: Monthly
+  const months=Object.values(monthlyMap).sort((a,b)=>b.month.localeCompare(a.month));
+  html+=`<div class="section-title">📈 סיכום חודשי (${months.length} חודשים)</div><table>
+  <tr>${['חודש','מספר טיפולים','הכנסות ₪','לקוחות שונים'].map(t=>th(t,'#7c2d12')).join('')}</tr>`;
+  months.forEach(m=>{
+    const [y,mo]=m.month.split('-');
+    const moName=MO_HEB[Number(mo)-1]+' '+y;
+    const isCur=m.month===mk;
+    html+=`<tr style="${isCur?'background:#fef9c3':''}">
+      ${td(moName,isCur)}${td(m.appts)}
+      ${td(m.revenue?'₪'+m.revenue.toLocaleString():'',false,'#059669')}
+      ${td(m.clients.size)}
+    </tr>`;
+  });
+  html+=`</table></body></html>`;
 
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
-  a.download='דוח_עסקי_'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'.csv';
+  a.download='דוח_עסקי_'+now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'.html';
   a.click();URL.revokeObjectURL(url);
 }
 function tabsHTML(upcoming,history){
