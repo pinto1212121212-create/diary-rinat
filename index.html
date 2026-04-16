@@ -2261,7 +2261,7 @@ function renderBGoals(all){
   const pct=topT>0?Math.min(100,Math.round(mRev/topT*100)):0;
   const pCls=pct>=100?'gn':pct>=60?'gy':'gp';
   const hero=`<div class="goals-hero"><div class="goals-hero-lbl">📊 ${MO[n.getMonth()]} ${n.getFullYear()}</div><div class="goals-hero-rev">₪${mRev.toLocaleString()} <span style="font-size:13px;opacity:.6">הכנסות</span></div>${topT?`<div class="goals-prog"><div class="goals-prog-fill ${pCls}" style="width:${pct}%"></div></div><div style="display:flex;justify-content:space-between;font-size:11px;color:rgba(255,255,255,.6);margin-bottom:8px"><span>יעד: ₪${topT.toLocaleString()}</span><span>${pct}%</span></div>`:''}<div class="goals-hero-stats"><div class="ghs"><div class="ghs-val">${mTr}</div><div class="ghs-lbl">טיפולים</div></div><div class="ghs"><div class="ghs-val">${mCl}</div><div class="ghs-lbl">לקוחות</div></div><div class="ghs"><div class="ghs-val">${all.filter(a=>a.dt>n).length}</div><div class="ghs-lbl">קרובים</div></div></div></div>`;
-  function calcActual(g){const p=all.filter(a=>a.dt<=n);const f=g.period==='month'?p.filter(a=>a.date.startsWith(mk)):g.period==='year'?p.filter(a=>a.date.startsWith(yk)):p;if(g.type==='revenue')return f.filter(a=>a.d.price).reduce((s,a)=>s+Number(a.d.price),0);if(g.type==='clients')return new Set(f.map(a=>a.d.name)).size;return f.length;}
+  function calcActual(g){const f=g.period==='month'?all.filter(a=>a.date.startsWith(mk)):g.period==='year'?all.filter(a=>a.date.startsWith(yk)):all;if(g.type==='revenue')return f.filter(a=>a.dt<=n&&a.d.price).reduce((s,a)=>s+Number(a.d.price),0);if(g.type==='clients')return new Set(f.map(a=>a.d.name)).size;return f.length;}
   const pL={month:'חודשי',year:'שנתי',week:'שבועי'},tL={revenue:'הכנסות ₪',clients:'לקוחות',treatments:'טיפולים'},tI={revenue:'💰',clients:'👥',treatments:'💆'};
   const form=S.showAddGoal?`<div class="goal-inp-card"><div style="font-size:14px;font-weight:800;color:#4c1d95;margin-bottom:10px;text-align:right">יעד חדש ✨</div><input class="goal-inp" id="gi-t" placeholder="שם היעד"><input class="goal-inp" id="gi-v" placeholder="מספר יעד" type="number"><div style="font-size:11px;color:#9ca3af;margin-bottom:6px;text-align:right">סוג:</div><div class="goal-type-grid">${[['revenue','💰 הכנסות'],['clients','👥 לקוחות'],['treatments','💆 טיפולים']].map(([v,l])=>`<button class="goal-type-btn${S.newGoal.type===v?' on':''}" onclick="S.newGoal.type='${v}';hRender()">${l}</button>`).join('')}</div><div style="font-size:11px;color:#9ca3af;margin-bottom:6px;text-align:right">תקופה:</div><div class="goal-type-grid">${[['month','📅 חודשי'],['year','📆 שנתי'],['week','📋 שבועי']].map(([v,l])=>`<button class="goal-type-btn${S.newGoal.period===v?' on':''}" onclick="S.newGoal.period='${v}';hRender()">${l}</button>`).join('')}</div><div style="display:flex;gap:8px"><button onclick="S.showAddGoal=false;hRender()" style="flex:1;padding:11px;border-radius:12px;border:none;background:#f3f4f6;color:#374151;font-weight:700;cursor:pointer;font-family:inherit">ביטול</button><button onclick="saveBGoal()" style="flex:2;padding:11px;border-radius:12px;border:none;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:white;font-weight:700;cursor:pointer;font-family:inherit">💾 שמור</button></div></div>`:`<button class="add-goal-btn" onclick="S.showAddGoal=true;hRender()">➕ הוסף יעד עסקי</button>`;
   const cards=goals.map(([id,g])=>{const act=calcActual(g),tgt=Number(g.target)||1,p2=Math.min(100,Math.round(act/tgt*100)),cls=p2>=100?'hit':p2>=60?'close':'far',rem=Math.max(0,tgt-act),pre=g.type==='revenue'?'₪':'';return`<div class="goal-card"><div class="goal-card-top"><button onclick="deleteBGoal('${id}')" style="background:none;border:none;cursor:pointer;color:#fca5a5;font-size:15px;padding:0">🗑</button><div style="text-align:right"><div class="goal-card-title">${tI[g.type]||'🎯'} ${x(g.title)}</div><span class="goal-card-period">${pL[g.period]||''} · ${tL[g.type]||''}</span></div></div><div class="goal-amounts"><div class="goal-target">/ ${pre}${Number(tgt).toLocaleString()}</div><div class="goal-current">${pre}${act.toLocaleString()}</div></div><div class="goal-bar"><div class="goal-bar-fill ${cls}" style="width:${p2}%"></div></div><div class="goal-footer"><div style="font-size:12px;color:#9ca3af">${p2<100?'נותר: '+pre+rem.toLocaleString():'🏆 הגעת ליעד!'}</div><div class="goal-pct ${cls}">${p2}%</div></div></div>`;}).join('');
@@ -2652,58 +2652,63 @@ function ncPick(color,y,m){
 
 function renderDebts(){
   const n=new Date();
-  // Find all past appointments with price but not paid
-  const debts=[];
+  const allDebts=[];
   Object.entries(S.A).forEach(([date,slots])=>{
     Object.entries(slots||{}).forEach(([time,d])=>{
       if(!d||!d.name)return;
       const dt=new Date(date+'T'+time);
-      if(dt>n)return; // future - not a debt yet
-      if(d.price&&Number(d.price)>0&&!d.paid){
-        debts.push({date,time,d,dt,key:date+'_'+time});
+      if(dt>n)return;
+      if(d.price&&Number(d.price)>0){
+        allDebts.push({date,time,d,dt,key:date+'_'+time,paid:!!d.paid});
       }
     });
   });
-  debts.sort((a,b)=>b.dt-a.dt);
+  allDebts.sort((a,b)=>b.dt-a.dt);
 
-  if(!debts.length)return`<div class="empty-state"><span class="empty-icon">🎉</span>אין חובות פתוחים<br><span style="font-size:13px">כל התשלומים מסודרים!</span></div>`;
+  const openDebts=allDebts.filter(a=>!a.paid);
+  const paidDebts=allDebts.filter(a=>a.paid);
 
-  const totalDebt=debts.reduce((s,a)=>s+Number(a.d.price),0);
-  const clientsWithDebt=new Set(debts.map(a=>a.d.name)).size;
-  const n2=new Date(),mk=n2.getFullYear()+'-'+String(n2.getMonth()+1).padStart(2,'0');
-  const monthDebt=debts.filter(a=>a.date.startsWith(mk)).reduce((s,a)=>s+Number(a.d.price),0);
+  if(!allDebts.length)return`<div class="empty-state"><span class="empty-icon">🎉</span>אין חובות פתוחים<br><span style="font-size:13px">כל התשלומים מסודרים!</span></div>`;
 
-  // Group by client
+  const totalDebt=openDebts.reduce((s,a)=>s+Number(a.d.price),0);
+  const clientsWithDebt=new Set(openDebts.map(a=>a.d.name)).size;
+  const mk=new Date().getFullYear()+'-'+String(new Date().getMonth()+1).padStart(2,'0');
+  const monthDebt=openDebts.filter(a=>a.date.startsWith(mk)).reduce((s,a)=>s+Number(a.d.price),0);
+
   const byClient={};
-  debts.forEach(a=>{
+  allDebts.forEach(a=>{
     const k=a.d.name;
-    if(!byClient[k])byClient[k]={name:k,phone:a.d.phone||'',items:[],total:0};
+    if(!byClient[k])byClient[k]={name:k,phone:a.d.phone||'',items:[],total:0,openTotal:0};
     byClient[k].items.push(a);
     byClient[k].total+=Number(a.d.price);
+    if(!a.paid)byClient[k].openTotal+=Number(a.d.price);
   });
 
-  const hero=`<div class="debt-hero">
+  const hero=openDebts.length?`<div class="debt-hero">
     <div class="debt-hero-lbl">💳 חובות פתוחים</div>
     <div class="debt-hero-amount">₪${totalDebt.toLocaleString()}</div>
     <div class="debt-hero-sub">ממתין לגביה</div>
     <div class="debt-hero-stats">
       <div class="dhs"><div class="dhs-val">${clientsWithDebt}</div><div class="dhs-lbl">לקוחות</div></div>
-      <div class="dhs"><div class="dhs-val">${debts.length}</div><div class="dhs-lbl">טיפולים</div></div>
+      <div class="dhs"><div class="dhs-val">${openDebts.length}</div><div class="dhs-lbl">טיפולים</div></div>
       <div class="dhs"><div class="dhs-val">₪${monthDebt.toLocaleString()}</div><div class="dhs-lbl">החודש</div></div>
     </div>
-  </div>`;
+  </div>`:`<div style="background:linear-gradient(135deg,#059669,#047857);border-radius:20px;padding:16px;margin-bottom:14px;text-align:center;color:white"><div style="font-size:22px">🎉</div><div style="font-weight:900;font-size:18px;margin-top:6px">כל החובות שולמו!</div></div>`;
 
-  const cards=Object.values(byClient).sort((a,b)=>b.total-a.total).map(cl=>{
-    const items=cl.items.map(a=>`<div class="debt-item">
+  const cards=Object.values(byClient).sort((a,b)=>b.openTotal-a.openTotal).map(cl=>{
+    const items=cl.items.map(a=>`<div class="debt-item" style="${a.paid?'opacity:.6;background:#f0fdf4':''}">
       <div class="debt-item-info">
         <div class="debt-item-name">${a.d.type||'טיפול'} — ${a.time}</div>
-        <div class="debt-item-date">📅 ${a.date}</div>
+        <div class="debt-item-date">📅 ${a.date} · ₪${Number(a.d.price).toLocaleString()}</div>
       </div>
-      <button class="debt-pay-btn" onclick="markPaid('${a.date}','${a.time}')">✓ שולם</button>
+      ${a.paid
+        ?`<span style="background:#dcfce7;color:#059669;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:800">✅ שולם</span>`
+        :`<button class="debt-pay-btn" onclick="markPaid('${a.date}','${a.time}')">✓ שולם</button>`
+      }
     </div>`).join('');
     return`<div class="debt-client-card">
       <div class="debt-client-hdr">
-        <div class="debt-client-amount">₪${cl.total.toLocaleString()}</div>
+        <div class="debt-client-amount" style="${cl.openTotal===0?'color:#059669':''}">₪${cl.openTotal>0?cl.openTotal.toLocaleString():'שולם הכל'}</div>
         <div>
           <div class="debt-client-name">${x(cl.name)}</div>
           ${cl.phone?`<div style="font-size:11px;color:#9ca3af">${x(cl.phone)}</div>`:''}
