@@ -2152,14 +2152,14 @@ function buildUpcoming(upcoming){
     <div class="next-hero-lbl">⚡ התור הקרוב ביותר — ${next.date===TD?'היום':next.date} 🕐 ${next.time}</div>
     <div class="next-hero-name">${x(next.d.name)}</div>
     <div class="next-hero-detail">${next.d.type?'💆 '+x(next.d.type):''}${next.d.duration?' · '+x(next.d.duration)+' דק':''}${next.d.price?' · ₪'+x(next.d.price):''}</div>
-    <div id="cd-wrap" class="countdown" style="margin-top:10px">
-      <div class="cd-seg"><div class="cd-num" id="cd-d">${String(Math.floor(ts/86400)).padStart(2,'0')}</div><div class="cd-lbl">ימים</div></div>
-      <div class="cd-sep">:</div>
-      <div class="cd-seg"><div class="cd-num" id="cd-h">${String(Math.floor((ts%86400)/3600)).padStart(2,'0')}</div><div class="cd-lbl">שעות</div></div>
+    <div id="cd-wrap" class="countdown" style="margin-top:10px;direction:ltr">
+      <div class="cd-seg"><div class="cd-num" id="cd-s">${String(ts%60).padStart(2,'0')}</div><div class="cd-lbl">שניות</div></div>
       <div class="cd-sep">:</div>
       <div class="cd-seg"><div class="cd-num" id="cd-m">${String(Math.floor((ts%3600)/60)).padStart(2,'0')}</div><div class="cd-lbl">דקות</div></div>
       <div class="cd-sep">:</div>
-      <div class="cd-seg"><div class="cd-num" id="cd-s">${String(ts%60).padStart(2,'0')}</div><div class="cd-lbl">שניות</div></div>
+      <div class="cd-seg"><div class="cd-num" id="cd-h">${String(Math.floor((ts%86400)/3600)).padStart(2,'0')}</div><div class="cd-lbl">שעות</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-seg"><div class="cd-num" id="cd-d">${String(Math.floor(ts/86400)).padStart(2,'0')}</div><div class="cd-lbl">ימים</div></div>
     </div>
   </div>`;
 
