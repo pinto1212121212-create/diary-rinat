@@ -145,7 +145,7 @@ textarea.task-modal-area{width:100%;border:1.5px solid #e5e7eb;border-radius:12p
 .next-hero-name{font-size:20px;font-weight:900;color:white;margin-bottom:4px}
 .next-hero-detail{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px}
 .next-hero-date{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;color:white;margin-bottom:12px}
-.countdown{display:flex;gap:7px}
+.countdown{display:flex;gap:7px;justify-content:center}
 .cd-seg{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:8px;text-align:center;min-width:50px}
 .cd-num{font-size:22px;font-weight:900;color:white;line-height:1;font-family:monospace;font-variant-numeric:tabular-nums}
 .cd-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.8px;text-transform:uppercase;margin-top:2px}
@@ -1263,7 +1263,7 @@ function getLaserAnim(){
 .next-hero-name{font-size:20px;font-weight:900;color:white;margin-bottom:4px}
 .next-hero-detail{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:12px}
 .next-hero-date{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.15);border-radius:10px;padding:4px 10px;font-size:12px;font-weight:700;color:white;margin-bottom:12px}
-.countdown{display:flex;gap:7px}
+.countdown{display:flex;gap:7px;justify-content:center}
 .cd-seg{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:12px;padding:8px;text-align:center;min-width:50px}
 .cd-num{font-size:22px;font-weight:900;color:white;line-height:1;font-family:monospace;font-variant-numeric:tabular-nums}
 .cd-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.8px;text-transform:uppercase;margin-top:2px}
@@ -2153,13 +2153,13 @@ function buildUpcoming(upcoming){
     <div class="next-hero-name">${x(next.d.name)}</div>
     <div class="next-hero-detail">${next.d.type?'💆 '+x(next.d.type):''}${next.d.duration?' · '+x(next.d.duration)+' דק':''}${next.d.price?' · ₪'+x(next.d.price):''}</div>
     <div id="cd-wrap" class="countdown" style="margin-top:10px;direction:ltr">
-      <div class="cd-seg"><div class="cd-num" id="cd-s">${String(ts%60).padStart(2,'0')}</div><div class="cd-lbl">שניות</div></div>
-      <div class="cd-sep">:</div>
-      <div class="cd-seg"><div class="cd-num" id="cd-m">${String(Math.floor((ts%3600)/60)).padStart(2,'0')}</div><div class="cd-lbl">דקות</div></div>
+      <div class="cd-seg"><div class="cd-num" id="cd-d">${String(Math.floor(ts/86400)).padStart(2,'0')}</div><div class="cd-lbl">ימים</div></div>
       <div class="cd-sep">:</div>
       <div class="cd-seg"><div class="cd-num" id="cd-h">${String(Math.floor((ts%86400)/3600)).padStart(2,'0')}</div><div class="cd-lbl">שעות</div></div>
       <div class="cd-sep">:</div>
-      <div class="cd-seg"><div class="cd-num" id="cd-d">${String(Math.floor(ts/86400)).padStart(2,'0')}</div><div class="cd-lbl">ימים</div></div>
+      <div class="cd-seg"><div class="cd-num" id="cd-m">${String(Math.floor((ts%3600)/60)).padStart(2,'0')}</div><div class="cd-lbl">דקות</div></div>
+      <div class="cd-sep">:</div>
+      <div class="cd-seg"><div class="cd-num" id="cd-s">${String(ts%60).padStart(2,'0')}</div><div class="cd-lbl">שניות</div></div>
     </div>
   </div>`;
 
