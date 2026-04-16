@@ -220,9 +220,9 @@ textarea.task-modal-area{width:100%;border:1.5px solid #e5e7eb;border-radius:12p
 .goal-type-btn{padding:9px;border-radius:12px;border:1.5px solid #ede9fe;background:#faf5ff;color:#6b7280;font-size:12px;font-weight:700;cursor:pointer;text-align:center;font-family:inherit}
 .goal-type-btn.on{border-color:#7c3aed;background:#ede9fe;color:#7c3aed}
 /* CRM */
-.crm-search-row{display:flex;gap:8px;margin-bottom:12px}
-.crm-search-inp{flex:1;border:1.5px solid #ede9fe;border-radius:12px;padding:10px 14px;font-size:14px;outline:none;background:white;text-align:right;font-family:inherit}
-.crm-search-inp:focus{border-color:#7c3aed}
+.crm-search-row{display:flex;gap:8px;margin-bottom:12px;background:white;border:1.5px solid #ede9fe;border-radius:14px;padding:4px 4px 4px 10px;align-items:center}
+.crm-search-inp{flex:1;border:none;padding:9px 4px;font-size:14px;outline:none;background:transparent;text-align:right;font-family:inherit;color:#1e1b4b}
+.crm-search-inp:focus{border:none}
 .crm-add-btn{background:#7c3aed;color:white;border:none;border-radius:12px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0;font-family:inherit}
 .crm-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
 .crm-stat{background:white;border-radius:12px;padding:10px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.05)}
@@ -2292,7 +2292,7 @@ function renderCRM(){
     return tags2.includes('problematic')||tags2.includes('nopay')||hasDebt2;
   });
 
-  let h=`<div class="crm-search-row"><input class="crm-search-inp" placeholder="🔍 חיפוש לקוח..." value="${x(S.crmSearch)}" oninput="S.crmSearch=this.value;updateCrmList()"><button class="crm-add-btn" onclick="openNewClient()">+ חדש</button></div>
+  let h=`<div class="crm-search-row"><input class="crm-search-inp" placeholder="🔍 חיפוש לקוח..." value="${x(S.crmSearch)}" oninput="S.crmSearch=this.value;updateCrmList()" onkeydown="if(event.key==='Enter'){updateCrmList();this.blur()}"><button class="crm-add-btn" onclick="updateCrmList()" style="padding:10px 12px">🔍</button><button class="crm-add-btn" onclick="openNewClient()">+ חדש</button></div>
   <div class="crm-filter-pills">
     <button class="crm-pill${S.crmFilter==='all'?' on':''}" onclick="S.crmFilter='all';crmRender()">👥 כולם <span class="crm-pill-badge">${clients.length}</span></button>
     <button class="crm-pill blue${S.crmFilter==='returning'?' on':''}" onclick="S.crmFilter='returning';crmRender()">🔄 חוזרים <span class="crm-pill-badge">${returningClients.length}</span></button>
