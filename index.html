@@ -1,6 +1,4 @@
-<!DOCTYPE html>
-<html dir="rtl" lang="he">
-<head>
+<html dir="rtl" lang="he"><head>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
@@ -566,7 +564,28 @@ textarea.task-modal-area{width:100%;border:1.5px solid #e5e7eb;border-radius:12p
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div id="app"><div class="loader"><div class="spinner"></div><div style="color:#6d28d9;font-weight:bold;font-size:16px">טוען...</div></div></div>
+<div id="app"><div class="home">
+      <button id="pwa-install-btn" class="pwa-btn" onclick="installPWA()">📲 הוסף למסך הבית</button><div class="home-title"><h1 onclick="S._devTaps=(S._devTaps||0)+1;if(S._devTaps&gt;=5)render()">📖 היומן שלנו</h1><p>דניאל ♡ רינת</p></div>
+      <div class="cards-row">
+        <button class="card card-daniel" onclick="S.screen='daniel';render()">
+          <div class="card-emoji">👨</div>
+          <div class="card-name">דניאל</div>
+          <div class="card-sub">משימות יומיות</div>
+        </button>
+        <button class="card card-rinat" onclick="S.screen='rinat';render()">
+          <div class="card-emoji">🦄</div>
+          <div class="card-name">רינת</div>
+          <div class="card-sub">משימות יומיות</div>
+        </button>
+      </div>
+      <button class="card card-diary" onclick="S.screen='diary';render()" style="flex-direction:row;gap:16px;justify-content:flex-start;padding:20px 24px">
+        <div class="card-emoji" style="font-size:40px;margin:0">📖</div>
+        <div style="text-align:right">
+          <div class="card-name">היומן שלנו</div>
+          <div class="card-sub">לייזר • משימות • מטרות • יעדים • לקוחות</div>
+        </div>
+      </button>
+    </div></div>
 <script>
 // ── Firebase REST ─────────────────────────────────────
 const FB='https://diary-daniel-rinat-default-rtdb.firebaseio.com/diary';
@@ -962,7 +981,7 @@ function render(){
       <button class="card card-diary" onclick="S.screen='diary';render()" style="flex-direction:row;gap:16px;justify-content:flex-start;padding:20px 24px">
         <div class="card-emoji" style="font-size:40px;margin:0">📖</div>
         <div style="text-align:right">
-          <div class="card-name">היומן שלנווו</div>
+          <div class="card-name">היומן שלנו</div>
           <div class="card-sub">לייזר • משימות • מטרות • יעדים • לקוחות</div>
         </div>
       </button>
@@ -3422,5 +3441,38 @@ function installPWA(){
   render();
 })();
 </script>
-</body>
-</html>
+
+<!-- כפתור פרסום מהיר -->
+<div id="deploy-fab" style="position:fixed;bottom:24px;left:16px;z-index:9999">
+  <button onclick="quickDeploy()" id="deploy-fab-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:50px;padding:12px 20px;color:white;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(249,115,22,0.5);font-family:inherit" disabled="">⏳ מפרסם...</button>
+</div>
+<script>
+async function quickDeploy(){
+  let token=localStorage.getItem('gh_deploy_token');
+  if(!token){
+    token=prompt('הכנס GitHub Token (נשמר פעם אחת):');
+    if(!token)return;
+    localStorage.setItem('gh_deploy_token',token);
+  }
+  const btn=document.getElementById('deploy-fab-btn');
+  btn.textContent='⏳ מפרסם...';btn.disabled=true;
+  try{
+    const html=document.documentElement.outerHTML;
+    const encoded=btoa(unescape(encodeURIComponent(html)));
+    const owner='pinto1212121212-create';
+    const repo='diary-rinat';
+    const apiUrl=`https://api.github.com/repos/${owner}/${repo}/contents/index.html`;
+    const r=await fetch(apiUrl,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
+    const data=await r.json();
+    const body={message:'Update from app',content:encoded};
+    if(data.sha)body.sha=data.sha;
+    const r2=await fetch(apiUrl,{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r2.json();
+    if(d.content){btn.textContent='✅ עלה!';btn.style.background='#059669';setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';btn.disabled=false;btn.style.background='';},3000);}
+    else{btn.textContent='❌ שגיאה';btn.disabled=false;setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';},3000);}
+  }catch(e){btn.textContent='❌ שגיאה';btn.disabled=false;setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';},3000);}
+}
+</script>
+
+
+</body></html>
