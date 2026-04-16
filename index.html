@@ -636,7 +636,7 @@ const x=(s)=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 
 // ── State ─────────────────────────────────────────────
 const S={
-  screen:'home', // home | daniel | rinat | diary
+  screen:'home', _devTaps:0, // home | daniel | rinat | diary
   // personal tasks
   dY:now.getFullYear(),dM:now.getMonth()+1,dSel:TD,
   rY:now.getFullYear(),rM:now.getMonth()+1,rSel:TD,
@@ -895,12 +895,36 @@ function laserModal(){
   return `<div class="overlay" onclick="S.lModal=null;modalRender()"><div class="sheet" onclick="event.stopPropagation()"><div class="sh"></div><div class="sb">${inner}</div></div></div>`;
 }
 
+
+function deployToGitHub(){
+  const token=localStorage.getItem('gh_token_diary')||'';
+  if(!token){
+    const t=prompt('הכנס GitHub Token:');
+    if(!t)return;
+    localStorage.setItem('gh_token_diary',t.trim());
+  }
+  const ghToken=localStorage.getItem('gh_token_diary');
+  const apiUrl='https://api.github.com/repos/pinto1212121212-create/diary-rinat/contents/index.html';
+  const btn=document.getElementById('deploy-btn');
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  fetch(apiUrl,{headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json'}})
+    .then(r=>r.json())
+    .then(data=>{
+      const sha=data.sha;
+      const html=document.documentElement.outerHTML;
+      const encoded=btoa(unescape(encodeURIComponent(html)));
+      return fetch(apiUrl,{method:'PUT',headers:{'Authorization':'token '+ghToken,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify({message:'Update from app',content:encoded,sha})});
+    })
+    .then(r=>r.json())
+    .then(()=>{if(btn){btn.textContent='✅';btn.style.background='#059669';}setTimeout(()=>{if(btn){btn.textContent='🚀';btn.disabled=false;btn.style.background='';}},3000);})
+    .catch(()=>{localStorage.removeItem('gh_token_diary');if(btn){btn.textContent='❌';btn.disabled=false;}setTimeout(()=>{if(btn){btn.textContent='🚀';}},3000);});
+}
 // ── Main Render ───────────────────────────────────────
 function render(){
   let h='';
   if(S.screen==='home'){
     h=`<div class="home">
-      <button id="pwa-install-btn" class="pwa-btn" onclick="installPWA()">📲 הוסף למסך הבית</button><div class="home-title"><h1>📖 היומן שלנו</h1><p>דניאל ♡ רינת</p></div>
+      ${S._devTaps>=5?`<div style="position:fixed;top:12px;left:12px;z-index:999"><button id="deploy-btn" onclick="deployToGitHub()" style="background:rgba(124,58,237,0.15);color:#a78bfa;border:1px solid rgba(167,139,250,0.3);border-radius:50%;width:32px;height:32px;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">🚀</button></div>`:''}<button id="pwa-install-btn" class="pwa-btn" onclick="installPWA()">📲 הוסף למסך הבית</button><div class="home-title"><h1 onclick="S._devTaps=(S._devTaps||0)+1;if(S._devTaps>=5)render()">📖 היומן שלנו</h1><p>דניאל ♡ רינת</p></div>
       <div class="cards-row">
         <button class="card card-daniel" onclick="S.screen='daniel';render()">
           <div class="card-emoji">👨</div>
