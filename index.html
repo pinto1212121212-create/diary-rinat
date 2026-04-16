@@ -151,7 +151,7 @@ textarea.task-modal-area{width:100%;border:1.5px solid #e5e7eb;border-radius:12p
 .cd-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.8px;text-transform:uppercase;margin-top:2px}
 .cd-sep{color:rgba(255,255,255,.5);font-size:22px;font-weight:900;align-self:flex-start;margin-top:8px}
 @keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.65}}
-.countdown.urgent .cd-num{color:#fca5a5;animation:urgentPulse 1s ease-in-out infinite}
+.countdown.urgent .cd-num{color:#fca5a5;animation:urgentPulse 1s ease-in-out infinite}.countdown.warning .cd-num{color:#fed7aa;animation:urgentPulse 1.5s ease-in-out infinite}.countdown.soon .cd-num{color:#fef08a}
 /* Appt cards */
 .appt-card-pro{background:white;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;gap:12px;align-items:center;border:1px solid transparent}
 .appt-time-pill{border-radius:10px;padding:7px 10px;text-align:center;font-size:13px;font-weight:800;flex-shrink:0;min-width:52px;border:1.5px solid}
@@ -1269,7 +1269,7 @@ function getLaserAnim(){
 .cd-lbl{font-size:9px;color:rgba(255,255,255,.6);letter-spacing:.8px;text-transform:uppercase;margin-top:2px}
 .cd-sep{color:rgba(255,255,255,.5);font-size:22px;font-weight:900;align-self:flex-start;margin-top:8px}
 @keyframes urgentPulse{0%,100%{opacity:1}50%{opacity:.65}}
-.countdown.urgent .cd-num{color:#fca5a5;animation:urgentPulse 1s ease-in-out infinite}
+.countdown.urgent .cd-num{color:#fca5a5;animation:urgentPulse 1s ease-in-out infinite}.countdown.warning .cd-num{color:#fed7aa;animation:urgentPulse 1.5s ease-in-out infinite}.countdown.soon .cd-num{color:#fef08a}
 /* Appt cards */
 .appt-card-pro{background:white;border-radius:14px;padding:12px 14px;margin-bottom:8px;box-shadow:0 2px 8px rgba(0,0,0,.06);display:flex;gap:12px;align-items:center;border:1px solid transparent}
 .appt-time-pill{border-radius:10px;padding:7px 10px;text-align:center;font-size:13px;font-weight:800;flex-shrink:0;min-width:52px;border:1.5px solid}
@@ -2138,7 +2138,14 @@ function startTimer(){
     e.h.textContent=String(Math.floor((ts%86400)/3600)).padStart(2,'0');
     e.m.textContent=String(Math.floor((ts%3600)/60)).padStart(2,'0');
     e.s.textContent=String(ts%60).padStart(2,'0');
-    if(e.w)e.w.className='countdown'+(ts<1800?' urgent':'');
+    if(e.w)e.w.className='countdown'+(ts<3600?' urgent':ts<10800?' warning':ts<86400?' soon':'');
+    const hero=document.getElementById('next-hero-card');
+    if(hero){
+      if(ts<3600)hero.style.background='linear-gradient(135deg,#dc2626,#991b1b)';
+      else if(ts<10800)hero.style.background='linear-gradient(135deg,#ea580c,#c2410c)';
+      else if(ts<86400)hero.style.background='linear-gradient(135deg,#ca8a04,#a16207)';
+      else hero.style.background='';
+    }
   },1000);
 }
 function buildUpcoming(upcoming){
@@ -2148,7 +2155,7 @@ function buildUpcoming(upcoming){
   const ms=next.dt-new Date(),ts=Math.floor(ms/1000);
 
   // Timer hero (compact)
-  const timerHero=`<div class="next-hero" style="margin-bottom:12px">
+  const timerHero=`<div id="next-hero-card" class="next-hero" style="margin-bottom:12px">
     <div class="next-hero-lbl">⚡ התור הקרוב ביותר — ${next.date===TD?'היום':next.date} 🕐 ${next.time}</div>
     <div class="next-hero-name">${x(next.d.name)}</div>
     <div class="next-hero-detail">${next.d.type?'💆 '+x(next.d.type):''}${next.d.duration?' · '+x(next.d.duration)+' דק':''}${next.d.price?' · ₪'+x(next.d.price):''}</div>
