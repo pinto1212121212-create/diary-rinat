@@ -2155,7 +2155,8 @@ function buildUpcoming(upcoming){
   const ms=next.dt-new Date(),ts=Math.floor(ms/1000);
 
   // Timer hero (compact)
-  const timerHero=`<div id="next-hero-card" class="next-hero" style="margin-bottom:12px">
+  const heroBg=ts<3600?'linear-gradient(135deg,#dc2626,#991b1b)':ts<10800?'linear-gradient(135deg,#ea580c,#c2410c)':ts<86400?'linear-gradient(135deg,#ca8a04,#a16207)':'';
+  const timerHero=`<div id="next-hero-card" class="next-hero" style="margin-bottom:12px${heroBg?';background:'+heroBg:''}">
     <div class="next-hero-lbl">⚡ התור הקרוב ביותר — ${next.date===TD?'היום':next.date} 🕐 ${next.time}</div>
     <div class="next-hero-name">${x(next.d.name)}</div>
     <div class="next-hero-detail">${next.d.type?'💆 '+x(next.d.type):''}${next.d.duration?' · '+x(next.d.duration)+' דק':''}${next.d.price?' · ₪'+x(next.d.price):''}</div>
