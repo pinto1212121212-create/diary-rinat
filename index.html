@@ -3487,34 +3487,68 @@ async function doConfirmReset(){
   try{
     resetResult=await auth.confirmPasswordReset(_currentOobCode,pass);
   }catch(e){
-    const errMsg=(e.message||'');
-    if(errMsg.toLowerCase().includes('expired')||errMsg.toLowerCase().includes('invalid')){
-      _lgMsg('❌ הקישור פג תוקף או כבר נוצל. בקש מייל חדש.');
-    }else if(errMsg.toLowerCase().includes('weak')||errMsg.toLowerCase().includes('policy')){
-      _lgMsg('❌ הסיסמה לא עומדת בדרישות: '+errMsg+'<br><br>נסה סיסמה חזקה יותר (לפחות 8 תווים עם אותיות ומספרים)');
-    }else{
-      _lgMsg('❌ שמירת הסיסמה נכשלה: '+errMsg);
-    }
-    return;
-  }
-  const email=resetResult&&resetResult.email;
-  if(!email){
-    _lgMsg('✅ הסיסמה נשמרה! עובר לכניסה...','ok');
-    setTimeout(()=>{window.history.replaceState({},'',location.pathname);location.reload();},2000);
-    return;
-  }
-  // כעת מוודא שהסיסמה החדשה באמת עובדת ע"י ניסיון התחברות אמיתי
-  _lgMsg('⏳ מוודא שהסיסמה נשמרה ב-Firebase...','ok');
-  try{
-    await auth.signIn(email,pass);
-    // הצלחה מוחלטת — המשתמש מחובר
-    _lgMsg('✅ הסיסמה החדשה עובדת! נכנס ליומן...','ok');
-    setTimeout(()=>{window.history.replaceState({},'',location.pathname);location.reload();},1500);
-  }catch(e){
-    // הסיסמה נשמרה ב-Firebase אבל ההתחברות נכשלה — בעיה משונה
     const em=(e.message||'');
-    _lgMsg('⚠️ הסיסמה נשמרה אבל ההתחברות האוטומטית נכשלה.<br><br><b>פתרון:</b> לחץ "חזרה לכניסה" ונסה להתחבר ידנית עם:<br><b style="color:#fbab20">'+email+'</b><br>והסיסמה החדשה שהזנת עכשיו.<br><br><small>('+em+')</small>');
+    if(em.toLowerCase().includes('expired')||em.toLowerCase().includes('invalid')){
+      _lgMsg('❌ הקישור פג תוקף או כבר נוצל. בקש מייל חדש.');
+    }else{_lgMsg('❌ שמירת הסיסמה נכשלה: '+em);}
+    return;
   }
+  const email=resetResult&&resetResult.email||'לא ידוע';
+  _lgMsg('⏳ מוודא שהסיסמה עובדת...','ok');
+  let loginWorked=false;
+  try{
+    const r=await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key='+FB_API_KEY,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,password:pass,returnSecureToken:true})
+    });
+    loginWorked=r.ok;
+  }catch(e){}
+  _showCredsScreen(email,pass,loginWorked);
+}
+
+function _showCredsScreen(email,pass,ok){
+  const cont=document.getElementById('reset-fields-wrap');
+  const btn=document.getElementById('rc-btn');
+  const emailEl=document.getElementById('reset-email');
+  if(btn)btn.style.display='none';
+  if(cont)cont.style.display='none';
+  if(emailEl)emailEl.innerHTML=ok?'✅ הסיסמה שונתה בהצלחה!':'⚠️ הסיסמה נשמרה';
+  const msgEl=document.getElementById('login-msg');
+  if(!msgEl)return;
+  const e2=email.replace(/'/g,"\\'");
+  const p2=pass.replace(/'/g,"\\'");
+  const stat=ok?'<div style="background:rgba(16,185,129,0.12);border:1px solid #10b981;border-radius:10px;padding:10px;color:#6ee7b7;font-size:13px;margin-bottom:12px;text-align:center">🔒 אומת: ההתחברות עובדת</div>':'<div style="background:rgba(251,171,32,0.12);border:1px solid #fbab20;border-radius:10px;padding:10px;color:#fcd34d;font-size:13px;margin-bottom:12px;text-align:center">⚠️ שמור את הפרטים ונסה ידנית</div>';
+  msgEl.innerHTML=stat+
+    '<div style="background:linear-gradient(135deg,rgba(251,171,32,0.15),rgba(245,158,11,0.08));border:2px solid #fbab20;border-radius:14px;padding:16px;margin-bottom:14px">'+
+      '<div style="color:#fcd34d;font-weight:800;font-size:15px;margin-bottom:10px;text-align:center">📝 שמור את הפרטים האלה!</div>'+
+      '<div style="color:rgba(255,255,255,0.75);font-size:12px;text-align:center;margin-bottom:12px">תצטרך את זה בכניסה הבאה</div>'+
+      '<div style="background:rgba(0,0,0,0.35);border-radius:10px;padding:10px;margin-bottom:8px">'+
+        '<div style="color:#93c5fd;font-size:11px;font-weight:700;margin-bottom:4px">📧 כתובת:</div>'+
+        '<div style="color:#fff;font-family:monospace;font-size:14px;word-break:break-all;user-select:all">'+email+'</div>'+
+      '</div>'+
+      '<div style="background:rgba(0,0,0,0.35);border-radius:10px;padding:10px;margin-bottom:12px">'+
+        '<div style="color:#93c5fd;font-size:11px;font-weight:700;margin-bottom:4px">🔑 סיסמה:</div>'+
+        '<div style="color:#fff;font-family:monospace;font-size:14px;word-break:break-all;user-select:all">'+pass+'</div>'+
+      '</div>'+
+      "<button onclick=\"_copyCreds('"+e2+"','"+p2+"')\" style=\"width:100%;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;margin-bottom:8px\">📋 העתק הכל</button>"+
+      "<button onclick=\"_shareCreds('"+e2+"','"+p2+"')\" style=\"width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;padding:12px;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit\">📤 שלח לוואטסאפ</button>"+
+    '</div>'+
+    "<button onclick=\"_finishReset('"+e2+"','"+p2+"')\" style=\"width:100%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:14px;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit\">✅ שמרתי — המשך ליומן</button>";
+}
+
+function _copyCreds(email,pass){
+  const t='כתובת: '+email+'\nסיסמה: '+pass;
+  if(navigator.clipboard)navigator.clipboard.writeText(t).then(()=>alert('✅ הועתק!')).catch(()=>alert(t));
+  else alert(t);
+}
+function _shareCreds(email,pass){
+  const t='פרטי כניסה:\nכתובת: '+email+'\nסיסמה: '+pass;
+  window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');
+}
+async function _finishReset(email,pass){
+  try{await auth.signIn(email,pass);}catch(e){}
+  window.history.replaceState({},'',location.pathname);
+  location.reload();
 }
 
 function _lgMsg(html,type){
