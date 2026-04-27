@@ -15871,49 +15871,9 @@ if(typeof window !== 'undefined'){
 })();
 </script>
 
-<!-- כפתור פרסום מהיר -->
-<div id="deploy-fab" style="position:fixed;bottom:24px;left:16px;z-index:9999;display:none">
-  <button onclick="quickDeploy()" id="deploy-fab-btn" style="background:linear-gradient(135deg,#f97316,#ea580c);border:none;border-radius:50px;padding:12px 20px;color:white;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(249,115,22,0.5);font-family:inherit">🚀 פרסם לאתר</button>
-</div>
+<!-- "🚀 פרסם לאתר" הוסר — פרסום נעשה דרך GitHub ישירות -->
 <script>
-let _deployTaps=0,_deployTimer=null;
-function diaryTap(){
-  _deployTaps++;
-  clearTimeout(_deployTimer);
-  if(_deployTaps>=5){
-    document.getElementById('deploy-fab').style.display='block';
-    _deployTaps=0;
-  } else {
-    _deployTimer=setTimeout(()=>{_deployTaps=0;},2000);
-  }
-}
-async function quickDeploy(){
-  let token=localStorage.getItem('gh_deploy_token');
-  if(!token){
-    token=prompt('הכנס GitHub Token (נשמר פעם אחת):');
-    if(!token)return;
-    localStorage.setItem('gh_deploy_token',token);
-  }
-  const btn=document.getElementById('deploy-fab-btn');
-  const fab=document.getElementById('deploy-fab');
-  fab.style.display='none';
-  const html=document.documentElement.outerHTML;
-  fab.style.display='block';btn.textContent='⏳ מפרסם...';btn.disabled=true;
-  try{
-    const encoded=btoa(unescape(encodeURIComponent(html)));
-    const owner='pinto1212121212-create';
-    const repo='diary-rinat';
-    const apiUrl=`https://api.github.com/repos/${owner}/${repo}/contents/index.html`;
-    const r=await fetch(apiUrl,{headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json'}});
-    const data=await r.json();
-    const body={message:'Update from app',content:encoded};
-    if(data.sha)body.sha=data.sha;
-    const r2=await fetch(apiUrl,{method:'PUT',headers:{'Authorization':'token '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},body:JSON.stringify(body)});
-    const d=await r2.json();
-    if(d.content){btn.textContent='✅ עלה!';btn.style.background='#059669';setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';btn.disabled=false;btn.style.background='';},3000);}
-    else{btn.textContent='❌ שגיאה';btn.disabled=false;setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';},3000);}
-  }catch(e){btn.textContent='❌ שגיאה';btn.disabled=false;setTimeout(()=>{btn.textContent='🚀 פרסם לאתר';},3000);}
-}
+function diaryTap(){}
 </script>
 
 <!-- ── Service Worker registration + auto-update banner ── -->
