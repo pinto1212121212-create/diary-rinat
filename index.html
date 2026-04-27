@@ -4368,7 +4368,7 @@ async function cleanupOldBackups(){
 // היסטוריה אינסופית דרך git log. מגן מפני פריצה לחשבון Firebase.
 const _GH_BACKUP_INTERVAL_MS=7*24*60*60*1000;
 const _GH_BACKUP_OWNER='pinto1212121212-create';
-const _GH_BACKUP_REPO='diary-backup';
+const _GH_BACKUP_REPO='diary-backup-';
 
 function _getGhBackupToken(){
   return localStorage.getItem('gh_deploy_token')||localStorage.getItem('gh_token_diary')||'';
@@ -4433,7 +4433,7 @@ async function runGithubBackupNow(){
       }
       _lgMsg('✅ הגיבוי הועלה ל-GitHub בהצלחה','ok');
     }else{
-      _lgMsg('❌ הגיבוי נכשל — בדקי שהריפו <b>diary-backup</b> קיים ושלטוקן יש הרשאת <b>repo</b>','err');
+      _lgMsg('❌ הגיבוי נכשל — בדקי שהריפו <b>diary-backup-</b> קיים ושלטוקן יש הרשאת <b>repo</b>','err');
     }
   }catch(e){
     _lgMsg('❌ שגיאה: '+(e.message||''),'err');
