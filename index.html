@@ -3638,6 +3638,15 @@ async function openMyAccount(){
     <button class="login-btn" style="background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;margin-bottom:8px" onclick="backupAllData()">📥 הורד גיבוי עכשיו</button>
     <button class="login-btn" style="background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;margin-bottom:8px" onclick="shareBackupNow()">📤 שלח (וואטסאפ / מייל / Drive)</button>
     <button class="login-btn" style="background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff" onclick="showRestoreSheet()">↩️ שחזר מגיבוי</button>
+    <div style="margin-top:14px;padding:12px;border:1px solid rgba(251,171,32,0.18);border-radius:12px;background:rgba(255,255,255,0.02)">
+      <div style="font-size:12px;color:rgba(251,171,32,0.85);font-weight:700;margin-bottom:6px">🔑 טוקן GitHub לגיבוי שבועי</div>
+      <div id="gh-token-status" style="font-size:11px;margin-bottom:8px;line-height:1.5"></div>
+      <input id="ma-gh-token" type="password" autocomplete="off" placeholder="ghp_... / github_pat_..." style="width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(251,171,32,0.2);border-radius:10px;padding:10px 12px;color:#fff;font-size:13px;font-family:inherit;direction:ltr;text-align:left;margin-bottom:8px">
+      <div style="display:flex;gap:6px">
+        <button class="login-btn" style="flex:1;background:linear-gradient(135deg,#0ea5e9,#0284c7);color:#fff;font-size:13px;padding:10px;margin-top:0" onclick="saveGhBackupToken()">💾 שמור טוקן</button>
+        <button class="login-btn" style="flex:1;background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;font-size:13px;padding:10px;margin-top:0" onclick="runGithubBackupNow()">▶️ גבה עכשיו</button>
+      </div>
+    </div>
     <div style="margin-top:20px;padding-top:20px;border-top:1px solid rgba(251,171,32,0.15)"></div>
     <button class="login-btn" style="background:linear-gradient(135deg,#334155,#1e293b);color:#fff" onclick="showAuditLog()">📋 יומן פעילות</button>
     <div style="margin-top:14px"></div>
@@ -3667,6 +3676,7 @@ async function openMyAccount(){
         `<div>• אוטומטי יומי (Firebase): ${fmt(fbLast)}</div>`+
         `<div>• אוטומטי שבועי (GitHub): ${fmt(ghLast)}</div>`;
     }
+    _refreshGhTokenStatus();
   }catch(e){}
   try{
     if(await bioAuth.isAvailable()){
@@ -4360,15 +4370,74 @@ const _GH_BACKUP_INTERVAL_MS=7*24*60*60*1000;
 const _GH_BACKUP_OWNER='pinto1212121212-create';
 const _GH_BACKUP_REPO='diary-backup';
 
+function _getGhBackupToken(){
+  return localStorage.getItem('gh_deploy_token')||localStorage.getItem('gh_token_diary')||'';
+}
+
 async function weeklyGithubBackupCheck(){
   try{
-    const ghToken=localStorage.getItem('gh_deploy_token')||'';
+    const ghToken=_getGhBackupToken();
     if(!ghToken)return;
     const last=parseInt(localStorage.getItem('last_gh_backup_at')||'0');
     if(Date.now()-last<_GH_BACKUP_INTERVAL_MS)return;
     const ok=await performGithubBackup(ghToken);
     if(ok)localStorage.setItem('last_gh_backup_at',String(Date.now()));
   }catch(e){console.warn('[backup] weekly GH check failed:',e);}
+}
+
+function _refreshGhTokenStatus(){
+  const el=document.getElementById('gh-token-status');
+  if(!el)return;
+  const has=!!_getGhBackupToken();
+  if(has){
+    el.textContent='✓ טוקן מוגדר — הגיבוי השבועי ירוץ אוטומטית בכניסה לאפליקציה';
+    el.style.color='rgba(74,222,128,0.85)';
+  }else{
+    el.textContent='⚠️ טוקן לא מוגדר — בלי טוקן הגיבוי השבועי לא ירוץ';
+    el.style.color='rgba(251,191,36,0.9)';
+  }
+}
+
+function saveGhBackupToken(){
+  const inp=document.getElementById('ma-gh-token');
+  if(!inp)return;
+  const v=(inp.value||'').trim();
+  if(!v){
+    localStorage.removeItem('gh_deploy_token');
+    localStorage.removeItem('gh_token_diary');
+    _refreshGhTokenStatus();
+    _lgMsg('הטוקן נמחק','ok');
+    return;
+  }
+  localStorage.setItem('gh_deploy_token',v);
+  inp.value='';
+  _refreshGhTokenStatus();
+  _lgMsg('✅ הטוקן נשמר במכשיר — אפשר ללחוץ "גבה עכשיו" לבדיקה','ok');
+}
+
+async function runGithubBackupNow(){
+  const tok=_getGhBackupToken();
+  if(!tok){_lgMsg('❌ אין טוקן — שמרי טוקן קודם','err');return;}
+  _lgMsg('⏳ מריץ גיבוי ל-GitHub...','ok');
+  try{
+    const ok=await performGithubBackup(tok);
+    if(ok){
+      localStorage.setItem('last_gh_backup_at',String(Date.now()));
+      const info=document.getElementById('backup-info');
+      if(info){
+        const fbLast=parseInt(localStorage.getItem('last_backup_at')||'0');
+        const fbStr=fbLast?('לפני פחות משעה'):('עוד לא בוצע');
+        info.innerHTML=
+          `<div>• אוטומטי יומי (Firebase): ${fbStr}</div>`+
+          `<div>• אוטומטי שבועי (GitHub): לפני פחות משעה</div>`;
+      }
+      _lgMsg('✅ הגיבוי הועלה ל-GitHub בהצלחה','ok');
+    }else{
+      _lgMsg('❌ הגיבוי נכשל — בדקי שהריפו <b>diary-backup</b> קיים ושלטוקן יש הרשאת <b>repo</b>','err');
+    }
+  }catch(e){
+    _lgMsg('❌ שגיאה: '+(e.message||''),'err');
+  }
 }
 
 async function performGithubBackup(ghToken){
